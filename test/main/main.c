@@ -8,11 +8,13 @@
 */
 #include "main.h"
 #include "esp_err.h"
+#include "esp_log.h"
 #include "esp_wifi_types_generic.h"
 
 
 #include "core/leds.h"
 #include "core/wifi.h"
+#include "freertos/portable.h"
 
 
 
@@ -62,6 +64,9 @@ void common_gpio_initialization(void){
 void app_main(void)
 {
 
+	
+	uint32_t queue_param;
+	wifi_ap_record_t info;
     /* Configure the peripheral according to the LED type */
 	common_gpio_initialization();
 	
@@ -73,15 +78,15 @@ void app_main(void)
 			  
 	
 	
-	uint64_t queue_param;
+
 	
 	
-	wifi_ap_record_t info;
+//	wifi_ap_record_t info;
 	// NVS 
 	esp_err_t ret = nvs_flash_init();
 	ESP_LOGI(TAG , "nvs_flash_init: 0x%04x", ret);
 	
-	wifi_init_stk();
+	//wifi_init_stk();
 	
 	
 	
@@ -94,9 +99,13 @@ void app_main(void)
 			ESP_LOGI(TAG, "EXTI_");
 		}
 		
-	
+		ESP_LOGI(TAG, "Free HEAP %d" , xPortGetFreeHeapSize());
+		ret = esp_wifi_sta_get_ap_info(&info);
 		
-        vTaskDelay(pdMS_TO_TICKS(500));
+		if(ret != ESP_OK){
+			wifi_init_stk();
+		}
+        vTaskDelay(pdMS_TO_TICKS(5000));
     }
 }
 

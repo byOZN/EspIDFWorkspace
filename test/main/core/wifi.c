@@ -6,6 +6,8 @@
 #include "esp_wifi_default.h"
 #include "esp_wifi_types_generic.h"
 #include "freertos/idf_additions.h"
+#include "freertos/projdefs.h"
+#include "portmacro.h"
 #include "sdkconfig.h"
 
 static const char * TAG = "WIFI";
@@ -88,5 +90,23 @@ void wifi_init_stk(void){
 	ESP_ERROR_CHECK(esp_wifi_start());
 	ESP_LOGI(TAG , "wifi init finish");
 	
+	
+	EventBits_t ret = xEventGroupWaitBits(s_wifi_event_group , 
+											WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+											pdFALSE,
+											pdFALSE,
+											portMAX_DELAY);
+											
+	
+	if(ret & WIFI_CONNECTED_BIT){		
+		ESP_LOGI(TAG, "Connect confirm to SSID: %s" , CONFIG_WIFI_SSID);
+	} else {
+		ESP_LOGI(TAG, "Not connected to SSID: %s" , CONFIG_WIFI_SSID);	
+	}
+											
+	esp_event_handler_instance_unregister(WIFI_EVENT , ESP_EVENT_ANY_ID ,&inst_any_id);
+	esp_event_handler_instance_unregister(IP_EVENT , IP_EVENT_STA_GOT_IP , &inst_got_ip);
+
+	vEventGroupDelete(s_wifi_event_group);
 	
 }
