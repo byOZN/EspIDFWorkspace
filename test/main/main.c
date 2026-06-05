@@ -83,7 +83,7 @@ void app_main(void)
 	ESP_LOGI(TAG , "nvs_flash_init: 0x%04x", ret);
 	
 	wifi_control_task_init();
-
+	
 	
 	
     while (1) {

@@ -11,4 +11,8 @@
 void leds_gpio_init(void);
 void leds_task_init(void);
 
+//private 
+
+
+
 #endif /* MAIN_CORE_LEDS_H_ */
