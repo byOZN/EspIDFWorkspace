@@ -13,11 +13,11 @@
 #include "esp_event.h"
 #include "esp_event.h"
 #include "freertos/FreeRTOS.h"
-
 #include "freertos/event_groups.h"
 #include "freertos/task.h"
 
 
-void wifi_init_stk(void);
+void wifi_control_task_init(void);
+
 
 #endif /* MAIN_CORE_WIFI_H_ */

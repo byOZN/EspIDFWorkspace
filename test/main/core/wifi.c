@@ -10,14 +10,14 @@
 #include "portmacro.h"
 #include "sdkconfig.h"
 
-static const char * TAG = "WIFI";
+static const char * TAG = "wifi";
 static EventGroupHandle_t s_wifi_event_group;
 
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT BIT1
 
 
-#define REP_WIFI_CONNECT 5 
+#define REP_WIFI_CONNECT 5 /*сколько раз пыытаемся подконнектится */ 
 static int s_connection_retry_count;
 
 static void event_handler(void* arg , esp_event_base_t event_base ,int32_t event_id, void* event_data ){
@@ -110,3 +110,47 @@ void wifi_init_stk(void){
 	vEventGroupDelete(s_wifi_event_group);
 	
 }
+
+
+void wifi_control_function(void *pvParameters);
+TaskHandle_t wifi_control_handler;
+
+void wifi_control_task_init(void){
+	
+	xTaskCreate((TaskFunction_t )wifi_control_function,
+	          (const char*    )"ControlLedTask",
+	          (uint16_t       )1024 * 4,
+	          (void*          )NULL,
+	          (UBaseType_t    )10,
+	          (TaskHandle_t*  )&wifi_control_handler); 
+	
+	
+	
+	
+}
+
+void wifi_control_function(void *pvParameters){
+	esp_err_t ret;
+	wifi_ap_record_t info;
+	UBaseType_t free_heap;
+	
+	for(;;){
+		ret = esp_wifi_sta_get_ap_info(&info);
+
+		if(ret != ESP_OK){
+			wifi_init_stk();
+		}
+		
+		free_heap = uxTaskGetStackHighWaterMark(NULL);
+		if (free_heap < 100 * 4){
+			ESP_LOGW(TAG, "Free wifi task HEAP %d byte" , free_heap * sizeof(StackType_t));
+		}
+	
+		
+		vTaskDelay(pdMS_TO_TICKS(5000)); // чекам состояние соединения раз в 5 секунд
+	}
+	
+	
+}
+
+
