@@ -13,8 +13,9 @@
 #include "core/leds.h"
 #include "core/wifi.h"
 #include "core/adc.h"
-
+#include "core/buttons.h"
 #include "portmacro.h"
+#include "rom/opi_flash.h"
 
 
 
@@ -25,54 +26,42 @@ static const char * TAG = "main";
 
 
 
-QueueHandle_t ButtonsQueue;
 
-static void IRAM_ATTR gpio_isr_handle(void*arg){
-	
-	uint32_t gpio_num = (uint32_t) arg;
-	
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;	
-	xQueueSendFromISR(ButtonsQueue, &gpio_num, &xHigherPriorityTaskWoken);
-	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-	
-}
+
+//static void IRAM_ATTR gpio_isr_handle(void*arg){
+//	
+//	uint32_t gpio_num = (uint32_t) arg;
+//	
+//	BaseType_t xHigherPriorityTaskWoken = pdFALSE;	
+//	xQueueSendFromISR(ButtonsQueue, &gpio_num, &xHigherPriorityTaskWoken);
+//	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+//	
+//}
 
 
 void common_gpio_initialization(void){
 	
 	
 	leds_gpio_init();
-	
-	gpio_install_isr_service(ESP_INTR_FLAG_LEVEL1);
-	
-	gpio_reset_pin(CONFIG_BUTTON_GPIO);
-	gpio_config_t gpos_s_config;
-	
-	 gpos_s_config.mode = GPIO_MODE_INPUT;
-	 gpos_s_config.pull_up_en = false;
-	 gpos_s_config.pull_down_en = false;
-	 gpos_s_config.intr_type = GPIO_INTR_POSEDGE;
-	 gpos_s_config.mode = GPIO_MODE_INPUT;	 
-	 gpos_s_config.pin_bit_mask  = 1ULL << CONFIG_BUTTON_GPIO;
-	 gpio_config(&gpos_s_config);
+	buttons_gpio_init();
 
-
-	gpio_set_level(CONFIG_BLINK_GPIO, false);
-	gpio_isr_handler_add(CONFIG_BUTTON_GPIO, gpio_isr_handle, NULL);
+	
+	
 }
 
 void app_main(void)
 {
 
 	
-	uint32_t queue_param;
+	btn_event_t queue_param;
 
 
 	common_gpio_initialization();
 	
 	leds_task_init();
+	buttons_task_init();
 	
-	ButtonsQueue = xQueueCreate(sizeof(uint32_t) , 10);
+
 	
 
 			  
@@ -82,18 +71,29 @@ void app_main(void)
 	esp_err_t ret = nvs_flash_init();
 	ESP_LOGI(TAG , "nvs_flash_init: 0x%04x", ret);
 	
-	wifi_control_task_init();
+	//wifi_control_task_init();
 	
 	
 	
     while (1) {
 		
-		if(xQueueReceive(ButtonsQueue, &queue_param, 0) == pdTRUE) {
+		if(xQueueReceive(button_1.queue, &queue_param,portMAX_DELAY) == pdTRUE) {
+			
+			switch(queue_param){
+				case BTN_EVENT_CLICK :
+				ESP_LOGI(TAG, "BTN click");
+				break;
+				case BTN_EVENT_LONG_PRESS :
+				ESP_LOGI(TAG, "LONG press");
+				break;	
+				default:
+					break;			
+			}
 			ESP_LOGI(TAG, "EXTI_");
 		}
 		
 	
-        vTaskDelay(pdMS_TO_TICKS(5000));
+//        vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
 

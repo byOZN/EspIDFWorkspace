@@ -146,6 +146,7 @@
 
 
 	static uint32_t rgb_mask  = 0UL;
+	
 	void rgb_timer_callback(TimerHandle_t xTimer) {
 		uint8_t offset =  (rgb_mask >> 24) & 0x7F;
 		
