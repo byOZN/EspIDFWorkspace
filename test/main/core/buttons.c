@@ -7,7 +7,6 @@
 
  
  #include "sdkconfig.h"
-
  #include "buttons.h"
  #include "esp_log.h"
 
@@ -45,11 +44,6 @@
  	.pin = CONFIG_BUTTON_GPIO,
  };
  
- 
- 
-// QueueHandle_t button_get_queue(btn_state_t *btn) {
-//     return btn->queue;
-// }
  
  
  
