@@ -9,6 +9,7 @@
 #include "freertos/projdefs.h"
 #include "portmacro.h"
 #include "sdkconfig.h"
+#include"device_statuses.h"
 
 static const char * TAG = "wifi";
 static EventGroupHandle_t s_wifi_event_group;
@@ -54,30 +55,7 @@ static void event_handler(void* arg , esp_event_base_t event_base ,int32_t event
 }
 
 
-void wifi_init_stk(void){
-	
 
-	EventBits_t ret = xEventGroupWaitBits(s_wifi_event_group , 
-											WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-											pdFALSE,
-											pdFALSE,
-											portMAX_DELAY);
-											
-	
-	if(ret & WIFI_CONNECTED_BIT){		
-		ESP_LOGI(TAG, "Connect confirm to SSID: %s" , CONFIG_WIFI_SSID);
-	} else {
-		ESP_LOGI(TAG, "Not connected to SSID: %s" , CONFIG_WIFI_SSID);
-		
-		//esp_wifi_connect();	
-	}
-											
-//	esp_event_handler_instance_unregister(WIFI_EVENT , ESP_EVENT_ANY_ID ,&inst_any_id);
-//	esp_event_handler_instance_unregister(IP_EVENT , IP_EVENT_STA_GOT_IP , &inst_got_ip);
-//
-//	vEventGroupDelete(s_wifi_event_group);
-	
-}
 
 
 void wifi_control_function(void *pvParameters);
@@ -133,17 +111,29 @@ void wifi_control_function(void *pvParameters){
 	ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
 	ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
 
+	
+	xEventGroupWaitBits(GetDevStatusEG(), DEV_STATE_WIFI_CONNECTING, pdFALSE, pdTRUE, portMAX_DELAY); 
 	ESP_ERROR_CHECK(esp_wifi_start());
 	ESP_LOGI(TAG , "wifi init finish");
 	
-	wifi_init_stk();
+
+	EventBits_t connection_status = xEventGroupWaitBits(s_wifi_event_group , 
+											WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+											pdFALSE,
+											pdFALSE,
+											portMAX_DELAY);
+											
+
+	if(connection_status & WIFI_CONNECTED_BIT){		
+		SetDevStatus(DEV_STATE_DATA_SENDING);
+		ESP_LOGI(TAG, "Connect confirm to SSID: %s" , CONFIG_WIFI_SSID);
+	} else {
+		SetDevStatus(DEV_STATE_ERROR);
+		ESP_LOGI(TAG, "Not connected to SSID: %s" , CONFIG_WIFI_SSID);
+	}
 		
 	for(;;){
-//		ret = esp_wifi_sta_get_ap_info(&info);
-//
-//		if(ret != ESP_OK){
-//			//wifi_init_stk();
-//		}
+		/*Тут должна быть передача CSV если статус DEV_STATE_DATA_SENDING*/
 		
 		free_heap = uxTaskGetStackHighWaterMark(NULL);
 		if (free_heap < 100 * 4){
@@ -151,7 +141,7 @@ void wifi_control_function(void *pvParameters){
 		}
 	
 		
-		vTaskDelay(pdMS_TO_TICKS(5000)); // чекам состояние соединения раз в 5 секунд
+		vTaskDelay(pdMS_TO_TICKS(5000)); 
 	}
 	
 	

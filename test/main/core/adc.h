@@ -9,5 +9,7 @@
 #define MAIN_CORE_ADC_H_
 
 
+void adc_init(void);
+void adc_task_init(void);
 
 #endif /* MAIN_CORE_ADC_H_ */

@@ -33,6 +33,7 @@ typedef struct LedCommand_s {
 
 
 
-
+static void led_update_params(LedCommand_t* header , uint8_t red ,  uint8_t green ,  uint8_t blue , LED_EFFECT effect );
+		
 
 #endif /* MAIN_CORE_LEDS_H_ */
