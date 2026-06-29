@@ -612,6 +612,12 @@ CONFIG_WIFI_PASS="agrodroid"
 # end of WIFI Config
 
 #
+# Server Config
+#
+CONFIG_UPLOAD_URL="http://192.168.1.100:8080/api/upload"
+# end of Server Config
+
+#
 # LedStrip Config
 #
 # CONFIG_BLINK_LED_GPIO is not set
