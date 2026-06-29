@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>ESP32 ADC Viewer</title>
+<style>
+  body { font-family: monospace; background:#111; color:#eee; margin:0; padding:20px; }
+  h1   { color:#4af; margin-bottom:4px; }
+  .sub { color:#888; font-size:13px; margin-bottom:24px; }
+  table{ border-collapse:collapse; width:100%; margin-top:16px; }
+  th,td{ border:1px solid #333; padding:6px 12px; text-align:right; }
+  th   { background:#1e1e1e; color:#4af; }
+  tr:nth-child(even){ background:#161616; }
+  .stat{ display:flex; gap:24px; flex-wrap:wrap; margin:16px 0; }
+  .card{ background:#1a1a2e; border:1px solid #333; border-radius:8px;
+         padding:14px 20px; min-width:140px; }
+  .card .val{ font-size:24px; color:#4af; font-weight:bold; }
+  .card .lbl{ font-size:11px; color:#888; margin-top:2px; }
+  canvas    { width:100%; height:300px; background:#0d0d1a;
+              border:1px solid #333; border-radius:8px; display:block; }
+  .section  { margin-top:32px; }
+  select    { background:#1a1a2e; color:#eee; border:1px solid #444;
+              padding:6px 10px; border-radius:4px; font-size:14px; }
+  button    { background:#4af; color:#000; border:none; padding:7px 16px;
+              border-radius:4px; cursor:pointer; font-weight:bold; }
+  .empty    { color:#888; }
+</style>
+</head>
+<body>
+<h1>&#9889; ESP32 ADC Viewer</h1>
+<div class="sub">POST /api/upload &mdash; принимает CSV от ESP32</div>
+
+{% if files %}
+<div class="section">
+  <label>Файл: </label>
+  <select id="sel" onchange="loadFile(this.value)">
+    {% for f in files %}
+    <option value="{{ f }}" {% if loop.last %}selected{% endif %}>{{ f }}</option>
+    {% endfor %}
+  </select>
+  &nbsp;<button onclick="loadFile(document.getElementById('sel').value)">Обновить</button>
+</div>
+
+<div class="stat" id="stats"></div>
+<canvas id="chart"></canvas>
+
+<div class="section">
+  <b>Первые и последние строки:</b>
+  <table id="preview">
+    <thead><tr><th>#</th><th>index</th><th>value</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+{% else %}
+<p class="empty">Нет загруженных файлов. Отправьте CSV с ESP32.</p>
+{% endif %}
+
+<script>
+const PREVIEW_ROWS = 10;
+
+async function loadFile(name) {
+  const r = await fetch('/api/data/' + encodeURIComponent(name));
+  if (!r.ok) { console.error('Failed to load', name); return; }
+  const d = await r.json();
+  renderStats(d);
+  renderChart(d.values);
+  renderPreview(d.rows);
+}
+
+function renderStats(d) {
+  const cards = [
+    ['Точек',    d.count],
+    ['Мин RAW',  d.min],
+    ['Макс RAW', d.max],
+    ['Среднее',  d.avg.toFixed(1)],
+    ['Файл',     d.filename],
+    ['Получен',  d.received],
+  ];
+  document.getElementById('stats').innerHTML = cards
+    .map(([l, v]) => `
+      <div class="card">
+        <div class="val">${v}</div>
+        <div class="lbl">${l}</div>
+      </div>`)
+    .join('');
+}
+
+function renderChart(values) {
+  const canvas = document.getElementById('chart');
+  canvas.width  = canvas.offsetWidth || 1200;
+  canvas.height = 300;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!values || values.length === 0) return;
+
+  const W = canvas.width, H = canvas.height;
+  const mn = Math.min(...values), mx = Math.max(...values);
+  const range = mx - mn || 1;
+  const pad = 10;
+
+  // Grid lines
+  ctx.strokeStyle = '#1e1e3e';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad + (H - 2 * pad) * i / 4;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Signal line
+  ctx.strokeStyle = '#4af';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  values.forEach((v, i) => {
+    const x = (i / (values.length - 1)) * W;
+    const y = pad + (H - 2 * pad) * (1 - (v - mn) / range);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Y-axis labels
+  ctx.fillStyle = '#888';
+  ctx.font = '11px monospace';
+  ctx.fillText(mx, 4, pad + 10);
+  ctx.fillText(mn, 4, H - pad);
+}
+
+function renderPreview(rows) {
+  if (!rows) return;
+  const head = rows.slice(0, PREVIEW_ROWS);
+  const tail = rows.slice(-PREVIEW_ROWS);
+  const sep  = rows.length > PREVIEW_ROWS * 2
+    ? [{ row_num: '...', index: '...', value: '...' }]
+    : [];
+  const all = [...head, ...sep, ...tail];
+  document.querySelector('#preview tbody').innerHTML = all
+    .map(r => `<tr><td>${r.row_num}</td><td>${r.index}</td><td>${r.value}</td></tr>`)
+    .join('');
+}
+
+// Автозагрузка последнего файла
+{% if files %}
+loadFile(document.getElementById('sel').value);
+{% endif %}
+</script>
+</body>
+</html>
